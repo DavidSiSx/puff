@@ -59,6 +59,11 @@ app.post('/api/login', (req, res) => {
 // ---------------------------------------------------------
 // ENCENDIDO DEL SERVIDOR
 // ---------------------------------------------------------
+
+// Ruta para el dashboard
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
 const PORT = 3001;
 app.listen(PORT, () => {
     console.log(`🚀 Pokelab Mock Server corriendo en http://localhost:${PORT}`);

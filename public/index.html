@@ -3,145 +3,781 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokelab - Tactical Engine</title>
+    <title>Pokelab — Tactical Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
     <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ── Variables ── */
+        :root {
+            --red:    #E3350D;
+            --red2:   #cc1a00;
+            --red3:   #b81500;
+            --dark:   #0a0a1a;
+            --navy:   #0d1f0d;
+            --pixel:  'Press Start 2P', monospace;
+            --sans:   'Nunito', sans-serif;
+        }
+
+        /* ── Base ── */
         body {
-            background-color: #0f172a; /* Fondo oscuro */
-            color: white;
-            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(180deg, #0a0a1a 0%, #0d1f0d 60%, #0a150a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--sans);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ── Stars ── */
+        #stars-canvas {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Moon ── */
+        .moon {
+            position: fixed;
+            top: 32px; right: 64px;
+            width: 64px; height: 64px;
+            border-radius: 50%;
+            background: #fefce8;
+            box-shadow: 0 0 30px rgba(255,240,150,.5), 0 0 70px rgba(255,240,150,.25);
+            pointer-events: none;
+            z-index: 1;
+            animation: moonGlow 5s ease-in-out infinite;
+        }
+        @keyframes moonGlow {
+            0%,100% { opacity: .75; }
+            50%      { opacity: 1; }
+        }
+
+        /* ── Floating Pokéballs (background) ── */
+        .bg-ball {
+            position: fixed;
+            pointer-events: none;
+            z-index: 1;
+            animation: floatBall var(--dur, 14s) var(--delay, 0s) ease-in-out infinite;
+            opacity: var(--op, .1);
+        }
+        @keyframes floatBall {
+            0%   { transform: translate(0,0) rotate(0deg); }
+            25%  { transform: translate(15px,-25px) rotate(90deg); }
+            50%  { transform: translate(-10px,12px) rotate(180deg); }
+            75%  { transform: translate(8px,-15px) rotate(270deg); }
+            100% { transform: translate(0,0) rotate(360deg); }
+        }
+
+        /* ── Tall Grass ── */
+        .grass {
+            position: fixed;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 2;
+            width: 220px;
+        }
+        .grass.right { right: 0; transform: scaleX(-1); }
+        .grass.left  { left: 0; }
+        .grass-blade { animation: sway var(--s, 4s) var(--d, 0s) ease-in-out infinite; }
+        @keyframes sway {
+            0%,100% { transform: skewX(0deg); }
+            33%      { transform: skewX(2deg); }
+            66%      { transform: skewX(-1.5deg); }
+        }
+
+        /* ── Ground ── */
+        .ground {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 120px;
+            background: linear-gradient(to top, #0d2e0d 0%, transparent 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* ── Card wrapper ── */
+        .card-wrap {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 360px;
+            padding: 0 16px;
+            animation: cardIn .8s cubic-bezier(.16,1,.3,1) both;
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(50px) scale(.9); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        /* ── Pokédex card ── */
+        .pokedex {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 25px 60px rgba(0,0,0,.75),
+                        0 0 0 1px rgba(255,255,255,.08),
+                        inset 0 1px 0 rgba(255,255,255,.18);
+            transform-style: preserve-3d;
+            transition: transform .12s ease-out;
+        }
+
+        /* ── Top (red) panel ── */
+        .panel-top {
+            background: linear-gradient(145deg, #cc1a00 0%, var(--red) 45%, #b81500 100%);
+            padding: 18px 20px 0;
+        }
+        .panel-top-inner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+        }
+
+        /* Blue light */
+        .blue-light {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8);
+            border: 3px solid rgba(255,255,255,.3);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            animation: blueGlow 2s ease-in-out infinite;
+            box-shadow: 0 0 12px rgba(96,165,250,.7);
+        }
+        @keyframes blueGlow {
+            0%,100% { box-shadow: 0 0 10px rgba(96,165,250,.5); }
+            50%      { box-shadow: 0 0 28px rgba(96,165,250,1); }
+        }
+        .blue-light-inner {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.6);
+        }
+
+        /* Small dots */
+        .dots { display: flex; gap: 6px; }
+        .dot {
+            width: 12px; height: 12px; border-radius: 50%;
+            animation: dotPulse 1.5s ease-in-out infinite;
+        }
+        .dot:nth-child(1) { background: #ef4444; animation-delay: 0s; }
+        .dot:nth-child(2) { background: #fbbf24; animation-delay: .3s; }
+        .dot:nth-child(3) { background: #22c55e; animation-delay: .6s; }
+        @keyframes dotPulse {
+            0%,100% { opacity: .7; transform: scale(1); }
+            50%      { opacity: 1;  transform: scale(1.15); }
+        }
+
+        .hinge-line {
+            flex: 1;
+            height: 2px;
+            background: rgba(0,0,0,.25);
+            border-radius: 2px;
+            margin-left: 8px;
+        }
+
+        /* ── Hinge ── */
+        .hinge { height: 8px; background: #111; }
+
+        /* ── Bottom (white) panel ── */
+        .panel-bottom {
+            background: linear-gradient(160deg, #f0f0f0 0%, #e2e2e2 100%);
+            padding: 22px 20px 20px;
+        }
+
+        /* ── Screen ── */
+        .screen {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 3px solid #0f0f1e;
+            border-radius: 14px;
+            padding: 20px 18px 16px;
+            margin-bottom: 18px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,.6), 0 2px 4px rgba(0,0,0,.3);
+            position: relative;
+            overflow: hidden;
+        }
+        /* Scanlines */
+        .screen::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,.15) 0px, rgba(0,0,0,.15) 1px, transparent 1px, transparent 3px);
+            background-size: 100% 3px;
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        /* ── Pokéball logo ── */
+        .pokeball-wrap {
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+            margin-bottom: 14px;
         }
-        .card {
-            background-color: #1e293b;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            width: 100%;
-            max-width: 350px;
-            border-top: 6px solid #dc2626; /* Pokeball red */
+        .pokeball-logo {
+            animation: ballIn .7s cubic-bezier(.34,1.56,.64,1) .3s both;
         }
-        .header {
+        @keyframes ballIn {
+            from { transform: scale(0) rotate(-180deg); opacity: 0; }
+            to   { transform: none; opacity: 1; }
+        }
+        .pokeball-logo.success-anim {
+            animation: ballShake .6s ease-in-out;
+        }
+        @keyframes ballShake {
+            0%,100% { transform: rotate(0deg); }
+            20%  { transform: rotate(-15deg); }
+            40%  { transform: rotate(15deg); }
+            60%  { transform: rotate(-10deg); }
+            80%  { transform: rotate(10deg); }
+        }
+
+        /* ── Screen title ── */
+        .screen-title {
             text-align: center;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            margin: 0;
-            font-style: italic;
-            text-transform: uppercase;
-        }
-        .header p {
-            color: #dc2626;
+            font-family: var(--pixel);
             font-size: 10px;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-top: 5px;
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251,191,36,.9), 0 2px 0 rgba(0,0,0,.8);
+            margin-bottom: 4px;
+            min-height: 20px;
         }
-        .input-group {
-            margin-bottom: 20px;
+        .cursor {
+            display: inline-block;
+            width: 2px; height: 14px;
+            background: #fbbf24;
+            vertical-align: middle;
+            margin-left: 2px;
+            animation: blink .5s step-end infinite;
         }
-        label {
-            display: block;
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
+
+        .screen-sub {
+            text-align: center;
+            font-family: var(--pixel);
+            font-size: 7px;
+            color: rgba(100,200,100,.65);
+            margin-bottom: 0;
+        }
+
+        /* ── Inputs ── */
+        .input-group { margin-bottom: 12px; position: relative; }
+
+        .input-group input {
+            width: 100%;
+            padding: 20px 14px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,.1);
+            background: rgba(10,8,30,.6);
+            color: #f0f0f0;
+            font-family: var(--pixel);
             font-size: 10px;
-            text-transform: uppercase;
-            color: #94a3b8;
-            margin-bottom: 5px;
-            font-weight: bold;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+            caret-color: var(--red);
         }
-        input {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #334155;
-            background-color: #0f172a;
-            color: white;
-            box-sizing: border-box;
+        .input-group input:focus {
+            border-color: rgba(227,53,13,.55);
+            box-shadow: 0 0 0 2px rgba(227,53,13,.25), 0 0 16px rgba(227,53,13,.12);
         }
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: #dc2626;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            cursor: pointer;
-            transition: background-color 0.3s;
+        .input-group label {
+            position: absolute;
+            left: 14px; top: 8px;
+            font-family: var(--pixel);
+            font-size: 7px;
+            color: rgba(255,255,255,.35);
+            pointer-events: none;
+            transition: color .2s;
         }
-        button:hover {
-            background-color: #b91c1c;
+        .input-group input:focus + label { color: #fbbf24; }
+
+        /* ── Forgot ── */
+        .forgot {
+            text-align: right;
+            margin-bottom: 14px;
         }
+        .forgot a {
+            font-family: var(--pixel);
+            font-size: 7px;
+            color: #b91c1c;
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .forgot a:hover { color: var(--red); }
+
+        /* ── Error / Success message ── */
         #mensaje {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 14px;
             display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-family: var(--pixel);
+            font-size: 7px;
+            line-height: 1.7;
+            margin-bottom: 12px;
+            animation: msgIn .4s ease-out;
         }
-        .error { background-color: rgba(220, 38, 38, 0.2); color: #ef4444; border: 1px solid #ef4444; }
-        .success { background-color: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #22c55e; }
+        @keyframes msgIn {
+            from { opacity: 0; transform: scale(.94); }
+            to   { opacity: 1; transform: none; }
+        }
+        #mensaje.error {
+            background: rgba(227,53,13,.1);
+            border: 2px solid rgba(227,53,13,.45);
+            color: var(--red);
+        }
+        #mensaje.success {
+            background: rgba(34,197,94,.1);
+            border: 2px solid rgba(34,197,94,.45);
+            color: #22c55e;
+        }
+
+        /* Shake for error */
+        .shake { animation: shake .45s ease-in-out; }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            15%  { transform: translateX(-8px); }
+            30%  { transform: translateX(8px); }
+            45%  { transform: translateX(-6px); }
+            60%  { transform: translateX(6px); }
+            75%  { transform: translateX(-3px); }
+            90%  { transform: translateX(3px); }
+        }
+
+        /* ── Submit button ── */
+        .btn-pokeball {
+            width: 100%;
+            height: 56px;
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            font-family: var(--pixel);
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .btn-pokeball:hover  { transform: scale(1.03); }
+        .btn-pokeball:active { transform: scale(.96) translateY(2px); }
+        .btn-pokeball:disabled { cursor: not-allowed; opacity: .8; }
+
+        .btn-half-top {
+            position: absolute; top: 0; left: 0; right: 0;
+            height: 50%;
+            background: var(--red);
+            transition: background .4s;
+        }
+        .btn-half-bot {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 50%;
+            background: #e8e8e8;
+            transition: background .4s;
+        }
+        .btn-divider {
+            position: absolute;
+            top: 50%; left: 0; right: 0;
+            height: 8px;
+            background: #111;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+        .btn-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+            width: 30px; height: 30px;
+            border-radius: 50%;
+            border: 2px solid #111;
+            background: #ccc;
+            transition: background .3s, box-shadow .3s;
+        }
+        /* Light sweep */
+        .btn-sweep {
+            position: absolute; inset: 0;
+            background: linear-gradient(105deg, transparent 0%, rgba(255,255,255,.3) 50%, transparent 100%);
+            transform: translateX(-120%) skewX(-12deg);
+            transition: transform .5s ease-in-out;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .btn-pokeball:hover .btn-sweep { transform: translateX(220%) skewX(-12deg); }
+
+        .btn-label {
+            position: relative; z-index: 4;
+            color: #1a1a2e;
+            font-family: var(--pixel);
+            font-size: 9px;
+            letter-spacing: 1px;
+            pointer-events: none;
+            transition: color .2s;
+        }
+
+        /* Loading state */
+        .btn-pokeball.loading .btn-half-top { animation: btnFlash .8s ease-in-out infinite alternate; }
+        @keyframes btnFlash {
+            from { background: var(--red); }
+            to   { background: #ff6b35; }
+        }
+        .btn-pokeball.loading .btn-center {
+            animation: centerSpin .6s linear infinite;
+            background: #ffffff;
+            box-shadow: 0 0 10px #fff;
+        }
+        @keyframes centerSpin {
+            from { transform: translate(-50%,-50%) rotate(0deg); }
+            to   { transform: translate(-50%,-50%) rotate(360deg); }
+        }
+        .btn-pokeball.loading .btn-label { color: white; text-shadow: 0 0 8px rgba(255,255,255,.8); }
+
+        /* Success state */
+        .btn-pokeball.success .btn-half-top { background: #059669; }
+        .btn-pokeball.success .btn-half-bot { background: #065f46; }
+        .btn-pokeball.success .btn-center   { background: #ffffff; box-shadow: 0 0 12px #10b981; }
+        .btn-pokeball.success .btn-label    { color: white; }
+
+        /* ── Footer row ── */
+        .footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 2px solid rgba(0,0,0,.1);
+        }
+        .footer-row span {
+            font-family: var(--pixel);
+            font-size: 7px;
+            color: #888;
+        }
+        .footer-row a {
+            font-family: var(--pixel);
+            font-size: 7px;
+            color: #b91c1c;
+            text-decoration: none;
+            transition: color .2s;
+        }
+        .footer-row a:hover { color: var(--red); }
+
+        /* ── Mini spinning balls ── */
+        .mini-balls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .mini-ball {
+            opacity: .3;
+            animation: spinBall var(--spd, 6s) linear infinite;
+        }
+        @keyframes spinBall { to { transform: rotate(360deg); } }
+
+        /* ── Version ── */
+        .version {
+            text-align: center;
+            margin-top: 14px;
+            font-family: var(--pixel);
+            font-size: 7px;
+            color: rgba(100,180,100,.45);
+            animation: cardIn 1s .6s both;
+        }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="header">
-            <h1>Pokelab</h1>
-            <p>Tactical Engine</p>
+    <!-- Stars canvas -->
+    <canvas id="stars-canvas"></canvas>
+
+    <!-- Moon -->
+    <div class="moon"></div>
+
+    <!-- Background Pokéballs -->
+    <div class="bg-ball" style="left:5%;top:10%;--dur:14s;--delay:0s;--op:.1">
+        <svg width="50" height="50" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#fff"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="5"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="5"/><circle cx="50" cy="50" r="13" fill="#111"/><circle cx="50" cy="50" r="8" fill="#ccc"/></svg>
+    </div>
+    <div class="bg-ball" style="left:82%;top:12%;--dur:20s;--delay:2s;--op:.09">
+        <svg width="38" height="38" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#fff"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="5"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="5"/><circle cx="50" cy="50" r="13" fill="#111"/><circle cx="50" cy="50" r="8" fill="#ccc"/></svg>
+    </div>
+    <div class="bg-ball" style="left:12%;top:62%;--dur:18s;--delay:4s;--op:.08">
+        <svg width="26" height="26" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#fff"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="5"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="5"/><circle cx="50" cy="50" r="13" fill="#111"/><circle cx="50" cy="50" r="8" fill="#ccc"/></svg>
+    </div>
+    <div class="bg-ball" style="left:75%;top:55%;--dur:22s;--delay:1s;--op:.1">
+        <svg width="44" height="44" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#fff"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="5"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="5"/><circle cx="50" cy="50" r="13" fill="#111"/><circle cx="50" cy="50" r="8" fill="#ccc"/></svg>
+    </div>
+
+    <!-- Tall grass -->
+    <svg class="grass left" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <path class="grass-blade" style="--s:4s;--d:0s"   d="M20 200 Q15 140 40 100 Q45 160 35 200"  fill="#1a3d1a"/>
+        <path class="grass-blade" style="--s:5s;--d:.3s"  d="M50 200 Q40 120 70 70 Q78 140 65 200"   fill="#1f4d1f"/>
+        <path class="grass-blade" style="--s:3.5s;--d:.8s" d="M80 200 Q85 130 60 80 Q55 150 75 200"  fill="#164016"/>
+        <path class="grass-blade" style="--s:4.5s;--d:.2s" d="M110 200 Q100 110 130 60 Q140 140 125 200" fill="#1a3d1a"/>
+        <path class="grass-blade" style="--s:3.8s;--d:.6s" d="M140 200 Q150 120 125 75 Q118 150 138 200" fill="#224422"/>
+        <path class="grass-blade" style="--s:4.2s;--d:1s"  d="M55 200 Q48 135 72 90 Q76 150 68 200"  fill="#2d6a2d"/>
+        <path class="grass-blade" style="--s:5.5s;--d:.4s" d="M95 200 Q105 125 88 78 Q83 145 92 200"  fill="#285828"/>
+    </svg>
+    <svg class="grass right" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+        <path class="grass-blade" style="--s:4s;--d:0s"   d="M20 200 Q15 140 40 100 Q45 160 35 200"  fill="#1a3d1a"/>
+        <path class="grass-blade" style="--s:5s;--d:.3s"  d="M50 200 Q40 120 70 70 Q78 140 65 200"   fill="#1f4d1f"/>
+        <path class="grass-blade" style="--s:3.5s;--d:.8s" d="M80 200 Q85 130 60 80 Q55 150 75 200"  fill="#164016"/>
+        <path class="grass-blade" style="--s:4.5s;--d:.2s" d="M110 200 Q100 110 130 60 Q140 140 125 200" fill="#1a3d1a"/>
+        <path class="grass-blade" style="--s:3.8s;--d:.6s" d="M140 200 Q150 120 125 75 Q118 150 138 200" fill="#224422"/>
+        <path class="grass-blade" style="--s:4.2s;--d:1s"  d="M55 200 Q48 135 72 90 Q76 150 68 200"  fill="#2d6a2d"/>
+        <path class="grass-blade" style="--s:5.5s;--d:.4s" d="M95 200 Q105 125 88 78 Q83 145 92 200"  fill="#285828"/>
+    </svg>
+
+    <!-- Ground -->
+    <div class="ground"></div>
+
+    <!-- ───────────── CARD ───────────── -->
+    <div class="card-wrap">
+        <div class="pokedex" id="pokedex">
+
+            <!-- RED TOP PANEL -->
+            <div class="panel-top">
+                <div class="panel-top-inner">
+                    <div class="blue-light"><div class="blue-light-inner"></div></div>
+                    <div class="dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                    <div class="hinge-line"></div>
+                </div>
+            </div>
+
+            <!-- HINGE -->
+            <div class="hinge"></div>
+
+            <!-- WHITE BOTTOM PANEL -->
+            <div class="panel-bottom">
+
+                <!-- Screen -->
+                <div class="screen">
+                    <div class="pokeball-wrap">
+                        <svg id="pokeball-logo" class="pokeball-logo" width="54" height="54" viewBox="0 0 100 100">
+                            <path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/>
+                            <path d="M5 50 A45 45 0 0 0 95 50Z" fill="#ffffff"/>
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#1a1a2e" stroke-width="5"/>
+                            <line x1="5" y1="50" x2="95" y2="50" stroke="#1a1a2e" stroke-width="5"/>
+                            <circle cx="50" cy="50" r="13" fill="#1a1a2e"/>
+                            <circle id="ball-button" cx="50" cy="50" r="8" fill="#cccccc"/>
+                            <ellipse cx="38" cy="30" rx="7" ry="4" fill="rgba(255,255,255,0.35)" transform="rotate(-30 38 30)"/>
+                        </svg>
+                    </div>
+                    <div class="screen-title" id="screen-title"></div>
+                    <div class="screen-sub">© POKÉLAB — TACTICAL ENGINE</div>
+                </div>
+
+                <!-- Inputs -->
+                <form id="loginForm" novalidate>
+                    <div class="input-group">
+                        <input type="email" id="email" name="email" autocomplete="email" required>
+                        <label for="email">TRAINER ID</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" autocomplete="current-password" required>
+                        <label for="password">SECRET CODE</label>
+                    </div>
+
+                    <div class="forgot"><a href="#">FORGOT CODE?</a></div>
+
+                    <!-- Message -->
+                    <div id="mensaje"></div>
+
+                    <!-- Pokéball button -->
+                    <button class="btn-pokeball" id="submitBtn" type="button" onclick="handleLogin()">
+                        <div class="btn-half-top"></div>
+                        <div class="btn-half-bot"></div>
+                        <div class="btn-divider"></div>
+                        <div class="btn-center" id="btn-center"></div>
+                        <div class="btn-sweep"></div>
+                        <span class="btn-label" id="btn-label">START GAME</span>
+                    </button>
+                </form>
+
+                <!-- Footer -->
+                <div class="footer-row">
+                    <span>NO ACCOUNT?</span>
+                    <a href="/register">REGISTER ►</a>
+                </div>
+
+                <!-- Mini spinning pokéballs -->
+                <div class="mini-balls">
+                    <svg class="mini-ball" style="--spd:6s" width="14" height="14" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#ccc"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="8"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="8"/><circle cx="50" cy="50" r="15" fill="#111"/><circle cx="50" cy="50" r="9" fill="#aaa"/></svg>
+                    <svg class="mini-ball" style="--spd:8s;animation-delay:.2s" width="14" height="14" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#ccc"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="8"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="8"/><circle cx="50" cy="50" r="15" fill="#111"/><circle cx="50" cy="50" r="9" fill="#aaa"/></svg>
+                    <svg class="mini-ball" style="--spd:7s;animation-delay:.4s" width="14" height="14" viewBox="0 0 100 100"><path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/><path d="M5 50 A45 45 0 0 0 95 50Z" fill="#ccc"/><circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="8"/><line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="8"/><circle cx="50" cy="50" r="15" fill="#111"/><circle cx="50" cy="50" r="9" fill="#aaa"/></svg>
+                </div>
+            </div>
         </div>
 
-        <form id="loginForm">
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="email" value="trainer@pokelab.gg" required>
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="password" value="pikachu123" required>
-            </div>
-            <button type="submit">Iniciar Sesión</button>
-        </form>
-
-        <div id="mensaje"></div>
+        <div class="version">VER. 2.0.0 — KANTO REGION</div>
     </div>
 
     <script>
-        // La lógica para conectar la vista con nuestro servidor vulnerable
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Evita que la página recargue
-            
-            const email = document.getElementById('email').value;
+        // ── Stars ─────────────────────────────────────────────────────────────
+        (function() {
+            const canvas = document.getElementById('stars-canvas');
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+
+            function resize() {
+                canvas.width  = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            function initStars() {
+                stars = Array.from({ length: 90 }, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height * .72,
+                    r: Math.random() * 1.5 + .4,
+                    phase: Math.random() * Math.PI * 2,
+                    speed: Math.random() * .015 + .008,
+                }));
+            }
+            function drawStars(t) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                stars.forEach(s => {
+                    const opacity = .2 + .8 * (Math.sin(t * s.speed + s.phase) * .5 + .5);
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(255,255,255,${opacity})`;
+                    ctx.fill();
+                });
+                requestAnimationFrame(drawStars);
+            }
+            window.addEventListener('resize', () => { resize(); initStars(); });
+            resize(); initStars();
+            requestAnimationFrame(drawStars);
+        })();
+
+        // ── 3D Tilt ───────────────────────────────────────────────────────────
+        (function() {
+            const card = document.getElementById('pokedex');
+            card.addEventListener('mousemove', e => {
+                const r = card.getBoundingClientRect();
+                const x = (e.clientX - r.left) / r.width  - .5;
+                const y = (e.clientY - r.top)  / r.height - .5;
+                card.style.transform = `perspective(900px) rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg)';
+                card.style.transition = 'transform .4s ease-out';
+            });
+            card.addEventListener('mouseenter', () => {
+                card.style.transition = 'transform .12s ease-out';
+            });
+        })();
+
+        // ── Typewriter ────────────────────────────────────────────────────────
+        (function() {
+            const el = document.getElementById('screen-title');
+            const text = 'TRAINER LOGIN';
+            let i = 0;
+            el.innerHTML = '<span class="cursor"></span>';
+            setTimeout(() => {
+                const iv = setInterval(() => {
+                    if (i >= text.length) { clearInterval(iv); return; }
+                    el.innerHTML = text.slice(0, ++i) + '<span class="cursor"></span>';
+                }, 65);
+            }, 900);
+        })();
+
+        // ── Form submit ───────────────────────────────────────────────────────
+        const form      = document.getElementById('loginForm');
+        const btn       = document.getElementById('submitBtn');
+        const btnLabel  = document.getElementById('btn-label');
+        const mensaje   = document.getElementById('mensaje');
+        const ballBtn   = document.getElementById('ball-button');
+        const ballLogo  = document.getElementById('pokeball-logo');
+
+        function setLoading(on) {
+            btn.disabled = on;
+            btn.classList.toggle('loading', on);
+            btnLabel.textContent = on ? 'LOADING...' : 'START GAME';
+        }
+
+        function showMsg(text, type) {
+            mensaje.className = type;
+            mensaje.style.display = 'flex';
+            // tiny pokéball icon + text
+            mensaje.innerHTML = `
+                <svg width="14" height="14" viewBox="0 0 100 100" style="flex-shrink:0">
+                    <path d="M5 50 A45 45 0 0 1 95 50Z" fill="#E3350D"/>
+                    <path d="M5 50 A45 45 0 0 0 95 50Z" fill="#ccc"/>
+                    <circle cx="50" cy="50" r="45" fill="none" stroke="#111" stroke-width="8"/>
+                    <line x1="5" y1="50" x2="95" y2="50" stroke="#111" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="15" fill="#111"/>
+                    <circle cx="50" cy="50" r="9" fill="#fff"/>
+                </svg>
+                <span>${text}</span>`;
+            // shake card on error
+            if (type === 'error') {
+                form.classList.remove('shake');
+                void form.offsetWidth; // reflow
+                form.classList.add('shake');
+            }
+        }
+
+        function setSuccess() {
+            btn.classList.remove('loading');
+            btn.classList.add('success');
+            btnLabel.textContent = 'CAUGHT! ✓';
+            ballBtn.setAttribute('fill', '#ffffff');
+            ballBtn.style.filter = 'drop-shadow(0 0 6px #10b981)';
+            ballLogo.classList.add('success-anim');
+        }
+
+        async function handleLogin() {
+            const email    = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const mensajeDiv = document.getElementById('mensaje');
+
+            if (!email || !password) {
+                showMsg('MISSING CREDENTIALS!', 'error');
+                return;
+            }
+
+            setLoading(true);
+            mensaje.style.display = 'none';
 
             try {
-                // Enviamos la petición a la misma API que atacan los scripts de Python
                 const response = await fetch('/api/login', {
-                    method: 'POST',
+                    method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body:    JSON.stringify({ email, password }),
                 });
 
                 const data = await response.json();
-                
-                mensajeDiv.style.display = 'block';
+
+                setLoading(false);
+
                 if (response.ok) {
-                    mensajeDiv.className = 'success';
-                    mensajeDiv.textContent = data.success;
+                    setSuccess();
+                    showMsg(data.success || 'ACCESS GRANTED!', 'success');
+                    setTimeout(() => { window.location.href = './dashboard.html'; }, 1400);
                 } else {
-                    mensajeDiv.className = 'error';
-                    mensajeDiv.textContent = data.error;
+                    showMsg(data.error || 'AUTHENTICATION FAILED!', 'error');
+                    btn.classList.remove('loading');
+                    btnLabel.textContent = 'START GAME';
                 }
-            } catch (error) {
-                console.error('Error:', error);
+            } catch (err) {
+                setLoading(false);
+                showMsg('CONNECTION ERROR!', 'error');
+                console.error(err);
             }
+        }
+
+        // Enter key
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter') handleLogin();
         });
     </script>
 </body>
